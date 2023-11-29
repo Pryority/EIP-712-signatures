@@ -61,4 +61,36 @@ contract DepositTest is Test {
         assertEq(token.allowance(owner, spender), 1e18);
         assertEq(token.nonces(owner), 1);
     }
+
+    function testRevert_ExpiredPermit() public {
+        // ARRANGE
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            owner: owner,
+            spender: spender,
+            value: 1e18,
+            nonce: token.nonces(owner),
+            deadline: 1 days
+        });
+
+        bytes32 digest = sigUtils.getTypedDataHash(permit);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPrivateKey, digest);
+
+        vm.warp(1 days + 1 seconds);
+
+        // ACT
+        vm.expectRevert("PERMIT_DEADLINE_EXPIRED");
+        token.permit(
+            permit.owner,
+            permit.spender,
+            permit.value,
+            permit.deadline,
+            v,
+            r,
+            s
+        );
+
+        // ASSERT
+        assertEq(token.nonces(owner), 0);
+    }
 }
