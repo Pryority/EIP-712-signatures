@@ -93,4 +93,30 @@ contract DepositTest is Test {
         // ASSERT
         assertEq(token.nonces(owner), 0);
     }
+
+    function testRevert_InvalidSigner() public {
+        // ARRANGE
+        SigUtils.Permit memory permit = SigUtils.Permit({
+            owner: owner,
+            spender: spender,
+            value: 1e18,
+            nonce: token.nonces(owner),
+            deadline: 1 days
+        });
+
+        bytes32 digest = sigUtils.getTypedDataHash(permit);
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(spenderPrivateKey, digest);
+
+        vm.expectRevert("INVALID_SIGNER");
+        token.permit(
+            permit.owner,
+            permit.spender,
+            permit.value,
+            permit.deadline,
+            v,
+            r,
+            s
+        );
+    }
 }
